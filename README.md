@@ -2,6 +2,17 @@
   <a href="https://www.edgedb.com"><img width="160px" src="logo.svg"></a>
 </p>
 
+![EdgeDB](./banner.png)
+
+- improve logo for dark mode on github
+- update messaging
+- add links for Docs, Quickstart, Blog
+- add banner for EdgeDB Day
+- update code samples
+- better description of EdgeDB
+- SDL
+- EdgeQL features
+
 [![Build Status](https://github.com/edgedb/edgedb/workflows/Tests/badge.svg?event=push&branch=master)](https://github.com/edgedb/edgedb/actions) [![Join GitHub discussions](https://img.shields.io/badge/join-github%20discussions-green)](https://github.com/edgedb/edgedb/discussions)
 
 # What is EdgeDB?
