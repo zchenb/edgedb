@@ -820,8 +820,7 @@ cdef class EdgeConnection:
 
         compiler_pool = self.server.get_compiler_pool()
 
-        # XXX: Probably won't stay this way?
-        stmt_mode = 'all' if query_req.output_format == FMT_NONE else 'single'
+        stmt_mode = 'all'
 
         started_at = time.monotonic()
         try:
