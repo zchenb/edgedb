@@ -45,7 +45,7 @@ jobs:
       run: |
         wget -q "https://packages.edgedb.com/archive/x86_64-unknown-linux-gnu/edgedb-server-$EDGEDB_VERSION.tar.gz"
         tar xzf edgedb-server-$EDGEDB_VERSION.tar.gz
-        edgedb-server-$EDGEDB_VERSION/bin/edgedb-server -D test-dir --bootstrap-only --testmode --devmode
+        edgedb-server-$EDGEDB_VERSION/bin/edgedb-server -D test-dir --bootstrap-only --testmode
     - name: Test
       # env:
       #   EDGEDB_TEST_POSTGRES_VERSION: ${{ matrix.postgres-version }}
