@@ -241,14 +241,13 @@ def resolve_relation(
 
     # lookup the object in schema
     schemas = [schema_name] if schema_name else ctx.options.search_path
-    modules = [public_to_default(s) for s in schemas]
 
     obj: Optional[s_sources.Source | s_properties.Property] = None
-    for module in modules:
+    for schema in schemas:
         if obj:
             break
 
-        object_name = sn.QualName(module, relation.name)
+        object_name = sn.QualName(schema, relation.name)
         obj = ctx.schema.get(  # type: ignore
             object_name,
             None,
@@ -257,10 +256,10 @@ def resolve_relation(
         )
 
     # try pointer table
-    for module in modules:
+    for schema in schemas:
         if obj:
             break
-        obj = _lookup_pointer_table(module, relation.name, ctx)
+        obj = _lookup_pointer_table(schema, relation.name, ctx)
 
     if not obj:
         rel_name = pgcodegen.generate_source(relation)
@@ -310,7 +309,7 @@ def resolve_relation(
 
 
 def _lookup_pointer_table(
-    module: str, name: str, ctx: Context
+    schema: str, name: str, ctx: Context
 ) -> Optional[s_links.Link | s_properties.Property]:
     # Pointer tables are either:
     # - multi link tables
@@ -320,7 +319,7 @@ def _lookup_pointer_table(
     if '.' not in name:
         return None
     object_name, link_name = name.split('.')
-    object_name_qual = sn.QualName(module, object_name)
+    object_name_qual = sn.QualName(schema, object_name)
 
     parent: s_objtypes.ObjectType = ctx.schema.get(  # type: ignore
         object_name_qual,

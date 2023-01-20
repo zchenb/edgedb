@@ -5195,14 +5195,14 @@ def _generate_sql_information_schema() -> List[dbops.Command]:
                 GROUP BY link.id, link.cardinality
                 HAVING link.cardinality = 'Many' OR COUNT(*) > 2
             )
-            SELECT link.id, obj_ty.schema_name, obj_ty.module_name,
+            SELECT link.id, obj_ty.schema_name,
                 CONCAT(obj_ty.table_name, '.', link.name) AS table_name
             FROM edgedb."_SchemaLink" link
             JOIN obj_ty ON obj_ty.id = link.source
             WHERE link.id IN (SELECT * FROM qualified_links)
         ) UNION ALL (
             -- multi properties
-            SELECT prop.id, obj_ty.schema_name, obj_ty.module_name,
+            SELECT prop.id, obj_ty.schema_name,
                 CONCAT(obj_ty.table_name, '.', prop.name) AS table_name
             FROM edgedb."_SchemaProperty" AS prop
             JOIN obj_ty ON obj_ty.id = prop.source

@@ -41,103 +41,111 @@ class TestSQL(tb.SQLQueryTestCase):
     async def test_sql_query_00(self):
         # basic
         res = await self.squery_values(
-            '''
-            SELECT title FROM "Movie" order by title
-            '''
+            """
+            SELECT title FROM default."Movie" order by title
+            """
         )
         self.assertEqual(res, [['Forrest Gump'], ['Saving Private Ryan']])
 
     async def test_sql_query_01(self):
         # table alias
         res = await self.scon.fetch(
-            '''
-            SELECT mve.title, mve.release_year, director_id FROM "Movie" as mve
-            '''
+            """
+            SELECT mve.title, mve.release_year, director_id
+            FROM default."Movie" as mve
+            """
         )
         self.assert_shape(res, 2, 3)
 
     async def test_sql_query_02(self):
         # SELECT FROM parent type
         res = await self.scon.fetch(
-            '''
-            SELECT * FROM "Content"
-            '''
+            """
+            SELECT * FROM default."Content"
+            """
         )
         self.assert_shape(res, 5, 3, ['id', 'genre_id', 'title'])
 
     async def test_sql_query_03(self):
         # SELECT FROM parent type only
         res = await self.scon.fetch(
-            '''
-            SELECT * FROM ONLY "Content" -- should have only one result
-            '''
+            """
+            SELECT * FROM ONLY default."Content" -- should have only one result
+            """
         )
         self.assert_shape(res, 1, 3, ['id', 'genre_id', 'title'])
 
     async def test_sql_query_04(self):
         # multiple FROMs
         res = await self.scon.fetch(
-            '''
+            """
             SELECT mve.title, "Person".first_name
-            FROM "Movie" mve, "Person" WHERE mve.director_id = "Person".id
-            '''
+            FROM default."Movie" mve, default."Person"
+            WHERE mve.director_id = "Person".id
+            """
         )
         self.assert_shape(res, 1, 2, ['title', 'first_name'])
 
     async def test_sql_query_05(self):
         res = await self.scon.fetch(
-            '''
+            """
             SeLeCt mve.title as tiT, perSon.first_name
-            FROM "Movie" mve, "Person" person
-            '''
+            FROM default."Movie" mve, default."Person" person
+            """
         )
         self.assert_shape(res, 6, 2, ['tit', 'first_name'])
 
     async def test_sql_query_06(self):
         # sub relations
         res = await self.scon.fetch(
-            '''
+            """
             SELECT id, title, prS.first_name
-            FROM "Movie" mve, (SELECT first_name FROM "Person") prs
-            '''
+            FROM default."Movie" mve, (
+                SELECT first_name FROM default."Person"
+            ) prs
+            """
         )
         self.assert_shape(res, 6, 3, ['id', 'title', 'first_name'])
 
     async def test_sql_query_07(self):
         # quoted case sensitive
         res = await self.scon.fetch(
-            '''
-            SELECT tItLe, release_year "RL year" FROM "Movie" ORDER BY titLe;
-            '''
+            """
+            SELECT tItLe, release_year "RL year"
+            FROM default."Movie"
+            ORDER BY titLe;
+            """
         )
         self.assert_shape(res, 2, 2, ['title', 'RL year'])
 
     async def test_sql_query_08(self):
         # JOIN
         res = await self.scon.fetch(
-            '''
+            """
             SELECT "Movie".id, "Genre".id
-            FROM "Movie" JOIN "Genre" ON "Movie".genre_id = "Genre".id
-            '''
+            FROM default."Movie"
+            JOIN default."Genre" ON "Movie".genre_id = "Genre".id
+            """
         )
         self.assert_shape(res, 2, 2, ['id', 'id'])
 
     async def test_sql_query_09(self):
         # resolve columns without table names
         res = await self.scon.fetch(
-            '''
+            """
             SELECT "Movie".id, title, name
-            FROM "Movie" JOIN "Genre" ON "Movie".genre_id = "Genre".id
-            '''
+            FROM default."Movie"
+            JOIN default."Genre" ON "Movie".genre_id = "Genre".id
+            """
         )
         self.assert_shape(res, 2, 3, ['id', 'title', 'name'])
 
     async def test_sql_query_10(self):
         # wildcard SELECT
         res = await self.scon.fetch(
-            '''
-            SELECT m.* FROM "Movie" m
-            '''
+            """
+            SELECT m.* FROM default."Movie" m
+            """
         )
         self.assert_shape(
             res,
@@ -149,41 +157,43 @@ class TestSQL(tb.SQLQueryTestCase):
     async def test_sql_query_11(self):
         # multiple wildcard SELECT
         res = await self.scon.fetch(
-            '''
-            SELECT * FROM "Movie"
-            JOIN "Genre" g ON "Movie".genre_id = "Genre".id
-            '''
+            """
+            SELECT * FROM default."Movie"
+            JOIN default."Genre" g ON "Movie".genre_id = "Genre".id
+            """
         )
         self.assert_shape(res, 2, 7)
 
     async def test_sql_query_12(self):
         # JOIN USING
         res = await self.scon.fetch(
-            '''
-            SELECT * FROM "Movie"
-            JOIN (SELECT id as genre_id, name FROM "Genre") g USING (genre_id)
-            '''
+            """
+            SELECT * FROM default."Movie"
+            JOIN (
+                SELECT id as genre_id, name FROM default."Genre"
+            ) g USING (genre_id)
+            """
         )
         self.assert_shape(res, 2, 7)
 
     async def test_sql_query_13(self):
         # CTE
         res = await self.scon.fetch(
-            '''
-            WITH g AS (SELECT id as genre_id, name FROM "Genre")
-            SELECT * FROM "Movie" JOIN g USING (genre_id)
-            '''
+            """
+            WITH g AS (SELECT id as genre_id, name FROM default."Genre")
+            SELECT * FROM default."Movie" JOIN g USING (genre_id)
+            """
         )
         self.assert_shape(res, 2, 7)
 
     async def test_sql_query_14(self):
         # CASE
         res = await self.squery_values(
-            '''
+            """
             SELECT title, CASE WHEN title='Forrest Gump' THEN 'forest'
             WHEN title='Saving Private Ryan' THEN 'the war film'
-            ELSE 'unknown' END AS nick_name FROM "Movie"
-            '''
+            ELSE 'unknown' END AS nick_name FROM default."Movie"
+            """
         )
         self.assertEqual(
             res,
@@ -196,9 +206,11 @@ class TestSQL(tb.SQLQueryTestCase):
     async def test_sql_query_15(self):
         # UNION
         res = await self.scon.fetch(
-            '''
-            SELECT id, title FROM "Movie" UNION SELECT id, title FROM "Book"
-            '''
+            """
+            SELECT id, title FROM default."Movie" 
+            UNION
+            SELECT id, title FROM default."Book"
+            """
         )
         self.assert_shape(res, 4, 2)
 
@@ -214,20 +226,20 @@ class TestSQL(tb.SQLQueryTestCase):
     async def test_sql_query_17(self):
         # ORDER BY
         res = await self.squery_values(
-            '''
+            """
             SELECT first_name, last_name
-            FROM "Person" ORDER BY last_name DESC NULLS FIRST
-            '''
+            FROM default."Person" ORDER BY last_name DESC NULLS FIRST
+            """
         )
         self.assertEqual(
             res, [['Robin', None], ['Steven', 'Spielberg'], ['Tom', 'Hanks']]
         )
 
         res = await self.squery_values(
-            '''
+            """
             SELECT first_name, last_name
-            FROM "Person" ORDER BY last_name DESC NULLS LAST
-            '''
+            FROM default."Person" ORDER BY last_name DESC NULLS LAST
+            """
         )
         self.assertEqual(
             res, [['Steven', 'Spielberg'], ['Tom', 'Hanks'], ['Robin', None]]
@@ -236,29 +248,31 @@ class TestSQL(tb.SQLQueryTestCase):
     async def test_sql_query_18(self):
         # LIMIT & OFFSET
         res = await self.squery_values(
-            '''
-            SELECT title FROM "Content" ORDER BY title OFFSET 1 LIMIT 2
-            '''
+            """
+            SELECT title FROM default."Content" ORDER BY title OFFSET 1 LIMIT 2
+            """
         )
         self.assertEqual(res, [['Forrest Gump'], ['Halo 3']])
 
     async def test_sql_query_19(self):
         # DISTINCT
         res = await self.squery_values(
-            '''
+            """
             SELECT DISTINCT name
-            FROM "Content" c JOIN "Genre" g ON (c.genre_id = g.id)
+            FROM default."Content" c
+            JOIN default."Genre" g ON (c.genre_id = g.id)
             ORDER BY name
-            '''
+            """
         )
         self.assertEqual(res, [['Drama'], ['Fiction']])
 
         res = await self.squery_values(
-            '''
+            """
             SELECT DISTINCT ON (name) name, title
-            FROM "Content" c JOIN "Genre" g ON (c.genre_id = g.id)
+            FROM default."Content" c
+            JOIN default."Genre" g ON (c.genre_id = g.id)
             ORDER BY name, title
-            '''
+            """
         )
         self.assertEqual(
             res,
@@ -268,27 +282,27 @@ class TestSQL(tb.SQLQueryTestCase):
     async def test_sql_query_20(self):
         # WHERE
         res = await self.squery_values(
-            '''
-            SELECT first_name FROM "Person"
+            """
+            SELECT first_name FROM default."Person"
             WHERE last_name IS NOT NULL AND LENGTH(first_name) < 4
-            '''
+            """
         )
         self.assertEqual(res, [['Tom']])
 
     async def test_sql_query_21(self):
         # window functions
         res = await self.squery_values(
-            '''
+            """
             WITH content AS (
                 SELECT c.id, c.title, pages
-                FROM "Content" c LEFT JOIN "Book" USING(id)
+                FROM default."Content" c LEFT JOIN "Book" USING(id)
             ),
             content2 AS (
                 SELECT id, COALESCE(pages, 0) as pages FROM content
             )
             SELECT pages, sum(pages) OVER (ORDER BY pages)
             FROM content2 ORDER BY pages DESC
-            '''
+            """
         )
         self.assertEqual(
             res,
@@ -298,88 +312,102 @@ class TestSQL(tb.SQLQueryTestCase):
     async def test_sql_query_22(self):
         # IS NULL/true
         res = await self.scon.fetch(
-            '''
-            SELECT id FROM "Person" WHERE last_name IS NULL
-            '''
+            """
+            SELECT id FROM default."Person"
+            WHERE last_name IS NULL
+            """
         )
         self.assert_shape(res, 1, 1)
 
         res = await self.scon.fetch(
-            '''
-            SELECT id FROM "Person" WHERE (last_name = 'Hanks') IS NOT TRUE
-            '''
+            """
+            SELECT id FROM default."Person"
+            WHERE (last_name = 'Hanks') IS NOT TRUE
+            """
         )
         self.assert_shape(res, 2, 1)
 
     async def test_sql_query_23(self):
         # ImplicitRow
         res = await self.scon.fetch(
-            '''
-            SELECT id FROM "Person"
+            """
+            SELECT id FROM default."Person"
             WHERE (first_name, last_name) IN (
                 ('Tom', 'Hanks'), ('Steven', 'Spielberg')
             )
-            '''
+            """
         )
         self.assert_shape(res, 2, 1)
 
     async def test_sql_query_24(self):
         # SubLink
         res = await self.squery_values(
-            '''
-            SELECT title FROM "Movie" WHERE id IN (
-                SELECT id FROM "Movie" ORDER BY title LIMIT 1
+            """
+            SELECT title FROM default."Movie" WHERE id IN (
+                SELECT id FROM default."Movie" ORDER BY title LIMIT 1
             )
-            '''
+            """
         )
         self.assertEqual(res, [['Forrest Gump']])
 
         res = await self.squery_values(
-            '''
-            SELECT (SELECT title FROM "Movie" ORDER BY title LIMIT 1)
-            '''
+            """
+            SELECT (SELECT title FROM default."Movie" ORDER BY title LIMIT 1)
+            """
         )
         self.assertEqual(res, [['Forrest Gump']])
 
     async def test_sql_query_25(self):
         # lower case object name
-        await self.scon.fetch('SELECT title FROM novel ORDER BY title')
+        await self.scon.fetch("SELECT title FROM default.novel ORDER BY title")
 
-        await self.scon.fetch('SELECT title FROM "novel" ORDER BY title')
+        await self.scon.fetch(
+            """
+            SELECT title FROM default."novel" ORDER BY title
+            """
+        )
 
         with self.assertRaisesRegex(
             asyncpg.UndefinedTableError, "unknown table"
         ):
-            await self.scon.fetch('SELECT title FROM "Novel" ORDER BY title')
+            await self.scon.fetch(
+                """
+                SELECT title FROM default."Novel" ORDER BY title
+                """
+            )
 
     async def test_sql_query_26(self):
         with self.assertRaisesRegex(
             asyncpg.UndefinedTableError, "unknown table"
         ):
-            await self.scon.fetch('SELECT title FROM Movie ORDER BY title')
+            await self.scon.fetch(
+                """
+                SELECT title FROM default.Movie ORDER BY title
+                """
+            )
 
     async def test_sql_query_27(self):
         # FROM LATERAL
         await self.scon.fetch(
-            '''
+            """
             SELECT name, title
-            FROM "Movie" m, LATERAL (
-                SELECT g.name FROM "Genre" g WHERE m.genre_id = g.id
+            FROM default."Movie" m, LATERAL (
+                SELECT g.name FROM default."Genre" g WHERE m.genre_id = g.id
             ) t
             ORDER BY title
-        '''
+            """
         )
 
     async def test_sql_query_28(self):
         # JOIN LATERAL
         res = await self.scon.fetch(
-            '''
+            """
             SELECT name, title
-            FROM "Movie" m CROSS JOIN LATERAL (
-                SELECT g.name FROM "Genre" g WHERE m.genre_id = g.id
+            FROM default."Movie" m CROSS JOIN LATERAL (
+                SELECT g.name FROM default."Genre" g WHERE m.genre_id = g.id
             ) t
             ORDER BY title
-        '''
+            """
         )
         self.assert_shape(res, 2, 2, ['name', 'title'])
 
@@ -387,18 +415,18 @@ class TestSQL(tb.SQLQueryTestCase):
         # link tables
 
         # multi
-        res = await self.scon.fetch('SELECT * FROM "Movie.actors"')
+        res = await self.scon.fetch('SELECT * FROM default."Movie.actors"')
         self.assert_shape(res, 3, 3, ['role', 'source', 'target'])
 
         # single with properties
-        res = await self.scon.fetch('SELECT * FROM "Movie.director"')
+        res = await self.scon.fetch('SELECT * FROM default."Movie.director"')
         self.assert_shape(res, 1, 3, ['bar', 'source', 'target'])
 
         # single without properties
         with self.assertRaisesRegex(
             asyncpg.UndefinedTableError, "unknown table"
         ):
-            await self.scon.fetch('SELECT * FROM "Movie.genre"')
+            await self.scon.fetch('SELECT * FROM default."Movie.genre"')
 
     async def test_sql_query_30(self):
         # VALUES
@@ -561,36 +589,36 @@ class TestSQL(tb.SQLQueryTestCase):
             '''
             SELECT table_schema, table_name
             FROM information_schema.tables
-            WHERE table_catalog = 'sql' AND table_schema ILIKE 'public%'
+            WHERE table_catalog = 'sql' AND table_schema ILIKE 'default%'
             ORDER BY table_schema, table_name
             '''
         )
         self.assertEqual(
             res,
             [
-                ['public', 'Book'],
-                ['public', 'Book.chapters'],
-                ['public', 'Content'],
-                ['public', 'Genre'],
-                ['public', 'Movie'],
-                ['public', 'Movie.actors'],
-                ['public', 'Movie.director'],
-                ['public', 'Person'],
-                ['public', 'novel'],
-                ['public', 'novel.chapters'],
-                ['public::nested', 'Hello'],
-                ['public::nested::deep', 'Rolling'],
+                ['default', 'Book'],
+                ['default', 'Book.chapters'],
+                ['default', 'Content'],
+                ['default', 'Genre'],
+                ['default', 'Movie'],
+                ['default', 'Movie.actors'],
+                ['default', 'Movie.director'],
+                ['default', 'Person'],
+                ['default', 'novel'],
+                ['default', 'novel.chapters'],
+                ['default::nested', 'Hello'],
+                ['default::nested::deep', 'Rolling'],
             ],
         )
 
     async def test_sql_query_introspection_01(self):
         res = await self.squery_values(
-            '''
+            """
             SELECT table_name, column_name, is_nullable, ordinal_position
             FROM information_schema.columns
-            WHERE table_schema = 'public'
+            WHERE table_schema = 'default'
             ORDER BY table_name, ordinal_position
-            '''
+            """
         )
 
         self.assertEqual(
@@ -668,21 +696,21 @@ class TestSQL(tb.SQLQueryTestCase):
 
     async def test_sql_query_schemas(self):
         await self.scon.fetch('SELECT id FROM "inventory"."Item";')
-        await self.scon.fetch('SELECT id FROM "public"."Person";')
+        await self.scon.fetch('SELECT id FROM "default"."Person";')
 
-        await self.scon.execute('SET search_path TO inventory, public;')
+        await self.scon.execute('SET search_path TO inventory, default;')
         await self.scon.fetch('SELECT id FROM "Item";')
 
-        await self.scon.execute('SET search_path TO inventory, public;')
+        await self.scon.execute('SET search_path TO inventory, default;')
         await self.scon.fetch('SELECT id FROM "Person";')
 
-        await self.scon.execute('SET search_path TO public;')
+        await self.scon.execute('SET search_path TO default;')
         await self.scon.fetch('SELECT id FROM "Person";')
 
         await self.scon.execute('SET search_path TO inventory;')
         await self.scon.fetch('SELECT id FROM "Item";')
 
-        await self.scon.execute('SET search_path TO public;')
+        await self.scon.execute('SET search_path TO default;')
         with self.assertRaisesRegex(
             asyncpg.UndefinedTableError, "unknown table"
         ):
@@ -700,12 +728,12 @@ class TestSQL(tb.SQLQueryTestCase):
             '''
         )
 
-        # HACK: Set search_path back to public
-        await self.scon.execute('SET search_path TO public;')
+        # HACK: Set search_path back to default
+        await self.scon.execute('SET search_path TO default;')
 
     async def test_sql_query_static_eval(self):
         res = await self.squery_values('select current_schema;')
-        self.assertEqual(res, [['public']])
+        self.assertEqual(res, [['default']])
 
         await self.squery_values('set search_path to blah;')
         res = await self.squery_values('select current_schema;')
