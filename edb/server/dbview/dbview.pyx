@@ -147,9 +147,6 @@ cdef class CompiledQuery:
 
 cdef class Database:
 
-    # Global LRU cache of compiled anonymous queries
-    _eql_to_compiled: typing.Mapping[str, dbstate.QueryUnitGroup]
-
     def __init__(
         self,
         DatabaseIndex index,
@@ -174,6 +171,7 @@ cdef class Database:
 
         self._eql_to_compiled = lru.LRUMapping(
             maxsize=defines._MAX_QUERIES_CACHE)
+        self._cache_locks = {}
         self._sql_to_compiled = lru.LRUMapping(
             maxsize=defines._MAX_QUERIES_CACHE)
 
@@ -959,6 +957,7 @@ cdef class DatabaseConnectionView:
         use_metrics=True,
     ) -> CompiledQuery:
         source = query_req.source
+        # Fast-path: avoid the locking at all on CACHE HIT
         if cached_globally:
             # WARNING: only set cached_globally to True when the query is
             # strictly referring to only shared stable objects in user schema
@@ -972,53 +971,95 @@ cdef class DatabaseConnectionView:
             )
         else:
             query_unit_group = self.lookup_compiled_query(query_req)
+
+        dbver = self._db.dbver
+        lock = None
         cached = True
-        if query_unit_group is None:
-            # Cache miss; need to compile this query.
-            cached = False
-            dbver = self._db.dbver
 
-            try:
-                query_unit_group = await self._compile(query_req)
-            except (errors.EdgeQLSyntaxError, errors.InternalServerError):
-                raise
-            except errors.EdgeDBError:
-                if self.in_tx_error():
-                    # Because we are in an error state it is more reasonable
-                    # to fail with TransactionError("commands ignored")
-                    # rather than with a potentially more cryptic error.
-                    # An exception from this rule are syntax errors and
-                    # ISEs, because these could arise while the user is
-                    # trying to properly rollback this failed transaction.
-                    self.raise_in_tx_error()
-                else:
-                    raise
-
-            self.check_capabilities(
-                query_unit_group.capabilities,
-                query_req.allow_capabilities,
-                errors.DisabledCapabilityError,
-                "disabled by the client",
-            )
-
-        if self.in_tx_error():
-            # The current transaction is aborted, so we must fail
-            # all commands except ROLLBACK or ROLLBACK TO SAVEPOINT.
-            first = query_unit_group[0]
-            if (
-                not (
-                    first.tx_rollback
-                    or first.tx_savepoint_rollback
-                    or first.tx_abort_migration
-                ) or len(query_unit_group) > 1
-            ):
-                self.raise_in_tx_error()
-
-        if not cached and query_unit_group.cacheable:
+        if query_unit_group is None and self._query_cache_enabled:
+            # Lock on the query compilation to avoid other coroutines running
+            # the same compile and waste computational resources
             if cached_globally:
-                self.server.system_compile_cache[query_req] = query_unit_group
+                key = query_req
+                lock_table = self.server.system_compile_cache_locks
             else:
-                self.cache_compiled_query(query_req, query_unit_group, dbver)
+                key = (
+                    query_req,
+                    self.get_modaliases(),
+                    self.get_session_config(),
+                    dbver,
+                )
+                lock_table = self._db._cache_locks
+            lock = lock_table.get(key)
+            if lock is None:
+                lock = asyncio.Lock()
+                lock_table[key] = lock
+            await lock.acquire()
+
+        try:
+            # Check the cache again with the lock acquired
+            if query_unit_group is None and self._query_cache_enabled:
+                if cached_globally:
+                    query_unit_group = (
+                        self.server.system_compile_cache.get(query_req)
+                    )
+                else:
+                    query_unit_group = self.lookup_compiled_query(query_req)
+
+            if query_unit_group is None:
+                # Cache miss; need to compile this query.
+                cached = False
+
+                try:
+                    query_unit_group = await self._compile(query_req)
+                except (errors.EdgeQLSyntaxError, errors.InternalServerError):
+                    raise
+                except errors.EdgeDBError:
+                    if self.in_tx_error():
+                        # Because we are in an error state it's more reasonable
+                        # to fail with TransactionError("commands ignored")
+                        # rather than with a potentially more cryptic error.
+                        # An exception from this rule are syntax errors and
+                        # ISEs, because these could arise while the user is
+                        # trying to properly rollback this failed transaction.
+                        self.raise_in_tx_error()
+                    else:
+                        raise
+
+                self.check_capabilities(
+                    query_unit_group.capabilities,
+                    query_req.allow_capabilities,
+                    errors.DisabledCapabilityError,
+                    "disabled by the client",
+                )
+
+            if self.in_tx_error():
+                # The current transaction is aborted, so we must fail
+                # all commands except ROLLBACK or ROLLBACK TO SAVEPOINT.
+                first = query_unit_group[0]
+                if (
+                    not (
+                        first.tx_rollback
+                        or first.tx_savepoint_rollback
+                        or first.tx_abort_migration
+                    ) or len(query_unit_group) > 1
+                ):
+                    self.raise_in_tx_error()
+
+            if not cached and query_unit_group.cacheable:
+                if cached_globally:
+                    self.server.system_compile_cache[query_req] = (
+                        query_unit_group
+                    )
+                else:
+                    self.cache_compiled_query(
+                        query_req, query_unit_group, dbver
+                    )
+        finally:
+            if lock is not None:
+                lock.release()
+                if not lock._waiters:
+                    del lock_table[key]
 
         if use_metrics:
             metrics.edgeql_query_compilations.inc(
