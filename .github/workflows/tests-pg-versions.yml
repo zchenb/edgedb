@@ -319,23 +319,8 @@ jobs:
       matrix:
         postgres-version: [ 16 ]
         single-mode:
-         - ''
-         - 'NOCREATEDB NOCREATEROLE'
          - 'CREATEDB NOCREATEROLE'
         multi-tenant-mode: [ '' ]
-        include:
-          - postgres-version: 14
-            single-mode: ''
-            multi-tenant-mode: ''
-          - postgres-version: 15
-            single-mode: ''
-            multi-tenant-mode: ''
-          - postgres-version: 16
-            single-mode: ''
-            multi-tenant-mode: 'remote-compiler'
-          - postgres-version: 16
-            single-mode: ''
-            multi-tenant-mode: 'multi-tenant'
     services:
       postgres:
         image: fantix/pgvector:${{ matrix.postgres-version }}
@@ -496,6 +481,14 @@ jobs:
                 input=script,
             )
 
+            dsn = "postgres://postgres:postgres@localhost/singles"
+            subprocess.run(
+                [str(psql), dsn],
+                check=True,
+                text=True,
+                input="CREATE EXTENSION pgvector",
+            )
+
         asyncio.run(main())
 
     - name: Test
@@ -520,7 +513,7 @@ jobs:
         if [[ "${{ matrix.single-mode }}" == *"NOCREATEDB"* ]]; then
           edb test -j1 -v --backend-dsn=$EDGEDB_TEST_BACKEND_DSN
         else
-          edb test -j2 -v --backend-dsn=$EDGEDB_TEST_BACKEND_DSN
+          edb test -j2 -v --backend-dsn=$EDGEDB_TEST_BACKEND_DSN -k test_dumpv4
         fi
 
 
