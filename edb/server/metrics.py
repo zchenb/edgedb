@@ -32,6 +32,12 @@ current_compiler_processes = registry.new_gauge(
     'Current number of active compiler processes.'
 )
 
+current_databases = registry.new_labeled_gauge(
+    'databases_current',
+    'Current number of databases.',
+    labels=('tenant',),
+)
+
 total_backend_connections = registry.new_labeled_counter(
     'backend_connections_total',
     'Total number of backend connections established.',

@@ -76,14 +76,17 @@ Retrieve instance metrics.
 All EdgeDB instances expose a Prometheus-compatible endpoint available via GET
 request. The following metrics are made available.
 
-Processes
-^^^^^^^^^
+System
+^^^^^^
 
 ``compiler_process_spawns_total``
   **Counter.** Total number of compiler processes spawned.
 
 ``compiler_processes_current``
   **Gauge.** Current number of active compiler processes.
+
+``databases_current``
+  **Gauge.** Current number of databases.
 
 Backend connections and performance
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
