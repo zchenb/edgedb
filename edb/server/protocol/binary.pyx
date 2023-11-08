@@ -150,6 +150,7 @@ cdef inline bint parse_boolean(value: bytes, header: str):
 
 
 cdef class EdgeConnection(frontend.FrontendConnection):
+    interface = "edgeql"
 
     def __init__(
         self,
@@ -1753,6 +1754,7 @@ def new_edge_connection(
     auth_data: bytes = b'',
     protocol_version: edbdef.ProtocolVersion = edbdef.CURRENT_PROTOCOL,
     conn_params: dict[str, str] | None = None,
+    connection_made_at: float | None = None,
 ):
     return EdgeConnection(
         server,
@@ -1763,6 +1765,7 @@ def new_edge_connection(
         auth_data=auth_data,
         protocol_version=protocol_version,
         conn_params=conn_params,
+        connection_made_at=connection_made_at,
     )
 
 
