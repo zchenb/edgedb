@@ -1101,6 +1101,10 @@ cdef class EdgeConnection(frontend.FrontendConnection):
         fields = {}
         if isinstance(exc, errors.EdgeDBError):
             fields.update(exc._attrs)
+            if isinstance(exc, errors.TransactionSerializationError):
+                metrics.transaction_serialization_errors.inc(
+                    1.0, self.get_tenant_label()
+                )
 
         try:
             formatted_error = exc.__formatted_error__
