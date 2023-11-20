@@ -119,6 +119,7 @@
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/<< plat_id >>@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         <%- if subdist != "" %>
         PKG_SUBDIST: "<< subdist >>"
         <%- endif %>

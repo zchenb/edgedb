@@ -565,6 +565,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/debian-buster@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "debian"
         PKG_PLATFORM_VERSION: "buster"
@@ -586,6 +587,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/debian-buster@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "debian"
         PKG_PLATFORM_VERSION: "buster"
@@ -607,6 +609,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/debian-bullseye@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "debian"
         PKG_PLATFORM_VERSION: "bullseye"
@@ -628,6 +631,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/debian-bullseye@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "debian"
         PKG_PLATFORM_VERSION: "bullseye"
@@ -649,6 +653,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/debian-bookworm@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "debian"
         PKG_PLATFORM_VERSION: "bookworm"
@@ -670,6 +675,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/debian-bookworm@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "debian"
         PKG_PLATFORM_VERSION: "bookworm"
@@ -691,6 +697,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/ubuntu-bionic@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "ubuntu"
         PKG_PLATFORM_VERSION: "bionic"
@@ -712,6 +719,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/ubuntu-bionic@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "ubuntu"
         PKG_PLATFORM_VERSION: "bionic"
@@ -733,6 +741,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/ubuntu-focal@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "ubuntu"
         PKG_PLATFORM_VERSION: "focal"
@@ -754,6 +763,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/ubuntu-focal@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "ubuntu"
         PKG_PLATFORM_VERSION: "focal"
@@ -775,6 +785,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/ubuntu-jammy@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "ubuntu"
         PKG_PLATFORM_VERSION: "jammy"
@@ -796,6 +807,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/ubuntu-jammy@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "ubuntu"
         PKG_PLATFORM_VERSION: "jammy"
@@ -817,6 +829,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/centos-7@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "centos"
         PKG_PLATFORM_VERSION: "7"
@@ -838,6 +851,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/centos-8@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "centos"
         PKG_PLATFORM_VERSION: "8"
@@ -859,6 +873,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/centos-8@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "centos"
         PKG_PLATFORM_VERSION: "8"
@@ -880,6 +895,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/rockylinux-9@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "rockylinux"
         PKG_PLATFORM_VERSION: "9"
@@ -901,6 +917,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/rockylinux-9@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "rockylinux"
         PKG_PLATFORM_VERSION: "9"
@@ -922,6 +939,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/linux-x86_64@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "linux"
         PKG_PLATFORM_VERSION: "x86_64"
@@ -943,6 +961,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/linux-aarch64@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "linux"
         PKG_PLATFORM_VERSION: "aarch64"
@@ -964,6 +983,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/linuxmusl-x86_64@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "linux"
         PKG_PLATFORM_VERSION: "x86_64"
@@ -985,6 +1005,7 @@ jobs:
     - name: Test
       uses: edgedb/edgedb-pkg/integration/linux/test/linuxmusl-aarch64@master
       env:
+        EDGEDB_DEBUG_SERVER: 1
         PKG_SUBDIST: "nightly"
         PKG_PLATFORM: "linux"
         PKG_PLATFORM_VERSION: "aarch64"
