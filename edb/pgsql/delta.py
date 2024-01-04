@@ -4584,11 +4584,9 @@ class PointerMetaCommand(
         aux_ptr_col = None
 
         source_rel_alias = f'source_{uuidgen.uuid1mc()}'
-        source_rel = f'''SELECT * FROM {tab}'''
+        source_rel = f'''SELECT *, ctid FROM {tab}'''
         source_identity_col = 'id'
-
         if ptr_table:
-            source_rel = f'''SELECT ctid as id, * FROM {tab}'''
             source_identity_col = 'ctid'
 
         # There are two major possibilities about the USING claus:
@@ -4880,7 +4878,15 @@ class PointerMetaCommand(
             src_path_id: (src_rel, ('value', 'source'))
         }
 
-        if ptr_table and for_each_pointer:
+        if for_each_pointer:
+            if ptr_table:
+                src_rel.path_outputs[(ptr_path_id, 'identity')] = \
+                    pgast.ColumnRef(name=('ctid',))
+                src_rel.path_outputs[(src_path_id, 'identity')] = \
+                    pgast.ColumnRef(name=('source',))
+                src_rel.path_outputs[(src_path_id, 'value')] = \
+                    pgast.ColumnRef(name=('source',))
+
             external_rels[src_path_id] = \
                 (src_rel, ('value', 'source', 'identity'))
             external_rels[ptr_path_id] = (src_rel, ('source',))
@@ -4965,14 +4971,14 @@ class PointerMetaCommand(
             path_scope_id=root_uid,
             expr=irast.SelectStmt(
                 iterator_stmt=irast.Set(
-                    path_id=iterator_id,
-                    typeref=iterator_id.target,
+                    path_id=src_path_id,
+                    typeref=src_path_id.target,
                     path_scope_id=iter_uid,
                     expr=irast.SelectStmt(
                         result=irast.Set(
                             path_scope_id=iter_uid,
-                            path_id=iterator_id,
-                            typeref=iterator_id.target,
+                            path_id=src_path_id,
+                            typeref=src_path_id.target,
                         )
                     )
                 ),

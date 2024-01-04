@@ -424,6 +424,9 @@ def _get_set_rvar(
         # Named tuple indirection.
         return process_set_as_tuple_indirection(ir_set, ctx=ctx)
 
+    if ir_set.path_id in ctx.external_rels:
+        return process_external_rel(ir_set, ctx=ctx)
+
     if ir_set.rptr is not None:
         # Regular non-computable path step.
         return process_set_as_path(ir_set, ctx=ctx)
@@ -431,9 +434,6 @@ def _get_set_rvar(
     if isinstance(ir_set, irast.EmptySet):
         # {}
         return process_set_as_empty(ir_set, ctx=ctx)
-
-    if ir_set.path_id in ctx.external_rels:
-        return process_external_rel(ir_set, ctx=ctx)
 
     # Regular non-computable path start.
     return process_set_as_root(ir_set, ctx=ctx)
