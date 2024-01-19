@@ -4242,7 +4242,7 @@ class PointerMetaCommand(
 
             # single -> multi
             conv_expr_ctes = textwrap.dedent(f'''\
-                _conv_rel(val, id) AS (
+                _conv_rel(val, iter) AS (
                     SELECT {qi(old_ptr_stor_info.column_name)}, id
                     FROM {qi(source_rel_alias)}
                 )
@@ -4276,7 +4276,7 @@ class PointerMetaCommand(
                 {conv_expr_ctes}
                 UPDATE {tab} AS _update
                 SET {qi(target_col)} = _conv_rel.val
-                FROM _conv_rel WHERE _update.id = _conv_rel.id
+                FROM _conv_rel WHERE _update.id = _conv_rel.iter
             ''')
             self.pgops.add(dbops.Query(update_qry))
 
@@ -4456,7 +4456,7 @@ class PointerMetaCommand(
                     {conv_expr_ctes}
                     UPDATE {tab} AS _update
                     SET {qi(target_col)} = _conv_rel.val
-                    FROM _conv_rel WHERE _update.id = _conv_rel.id
+                    FROM _conv_rel WHERE _update.id = _conv_rel.iter
                 ''')
                 ops.add_command(dbops.Query(update_qry))
             else:
@@ -4465,7 +4465,7 @@ class PointerMetaCommand(
                     "{source_rel_alias}" AS ({source_rel}),
                     {conv_expr_ctes}
                     INSERT INTO {tab} (source, target)
-                    (SELECT id, val FROM _conv_rel WHERE val IS NOT NULL)
+                    (SELECT iter, val FROM _conv_rel WHERE val IS NOT NULL)
                 ''')
 
                 ops.add_command(dbops.Query(update_qry))
@@ -4584,10 +4584,11 @@ class PointerMetaCommand(
         aux_ptr_col = None
 
         source_rel_alias = f'source_{uuidgen.uuid1mc()}'
+        source_rel_alias = f'source_rel' # DEBUG
         source_rel = f'''SELECT *, ctid FROM {tab}'''
-        source_identity_col = 'id'
+        source_iter_col = 'id'
         if ptr_table:
-            source_identity_col = 'ctid'
+            source_iter_col = 'ctid'
 
         # There are two major possibilities about the USING claus:
         # 1) trivial case, where the USING clause refers only to the
@@ -4645,7 +4646,7 @@ class PointerMetaCommand(
             {cast_expr_sql}
             UPDATE {tab} AS _update
             SET {qi(target_col)} = _conv_rel.val
-            FROM _conv_rel WHERE _update.{source_identity_col} = _conv_rel.id
+            FROM _conv_rel WHERE _update.{source_iter_col} = _conv_rel.iter
         '''
         self.pgops.add(dbops.Query(update_qry))
         trivial_cast_expr = qi(target_col)
@@ -4775,7 +4776,7 @@ class PointerMetaCommand(
         - Must be provided with alias of "source" rel - the relation that 
           contains all columns of the subject ObjectType.
         - Result is SQL string that contains CTEs, last of which has following
-          signature: _conv_rel (id, val)
+          signature: _conv_rel (val, iter)
 
         for_each_pointer: when True, the expression will be evaluated for each
           pointer instead of for each object. This affects multi properties and
@@ -4874,23 +4875,28 @@ class PointerMetaCommand(
             rel_name=(source_alias,),
             path_id=src_path_id,
         )
+        src_rel.path_outputs[(src_path_id, 'iterator')] = \
+            pgast.ColumnRef(name=('id',))
         external_rels = {
-            src_path_id: (src_rel, ('value', 'source'))
+            src_path_id: (src_rel, ('value', 'source', 'identity', 'iterator'))
         }
 
         if for_each_pointer:
             if ptr_table:
                 src_rel.path_outputs[(ptr_path_id, 'identity')] = \
                     pgast.ColumnRef(name=('ctid',))
-                src_rel.path_outputs[(src_path_id, 'identity')] = \
-                    pgast.ColumnRef(name=('source',))
-                src_rel.path_outputs[(src_path_id, 'value')] = \
-                    pgast.ColumnRef(name=('source',))
+                src_rel.path_outputs[(tgt_path_id, 'identity')] = \
+                    pgast.ColumnRef(name=('ctid',))
+                src_rel.path_outputs[(tgt_path_id, 'iterator')] = \
+                    pgast.ColumnRef(name=('ctid',))
+            else:
+                src_rel.path_outputs[(tgt_path_id, 'iterator')] = \
+                    pgast.ColumnRef(name=('id',))
 
-            external_rels[src_path_id] = \
-                (src_rel, ('value', 'source', 'identity'))
-            external_rels[ptr_path_id] = (src_rel, ('source',))
-            external_rels[tgt_path_id] = (src_rel, ('identity',))
+            external_rels[ptr_path_id] = \
+                (src_rel, ('source', 'value'))
+            external_rels[tgt_path_id] = \
+                (src_rel, ('identity', 'source', 'value', 'iterator'))
 
         #     if ptr_table:
         #         rvar = compiler.new_external_rvar(
@@ -4925,7 +4931,7 @@ class PointerMetaCommand(
         # The result is roughly equivalent to:
         # for obj in Object union select <expr>
 
-        iterator_id = src_path_id if not for_each_pointer else ptr_path_id
+        iterator_id = src_path_id if not for_each_pointer else tgt_path_id
 
         # generate a unique path id for the outer scope
         typ = orig_schema.get(f'schema::ObjectType', type=s_types.Type)
@@ -4971,14 +4977,14 @@ class PointerMetaCommand(
             path_scope_id=root_uid,
             expr=irast.SelectStmt(
                 iterator_stmt=irast.Set(
-                    path_id=src_path_id,
-                    typeref=src_path_id.target,
+                    path_id=iterator_id,
+                    typeref=iterator_id.target,
                     path_scope_id=iter_uid,
                     expr=irast.SelectStmt(
                         result=irast.Set(
                             path_scope_id=iter_uid,
-                            path_id=src_path_id,
-                            typeref=src_path_id.target,
+                            path_id=iterator_id,
+                            typeref=iterator_id.target,
                         )
                     )
                 ),
@@ -4999,7 +5005,7 @@ class PointerMetaCommand(
 
         # ensure the result contains the object id in the second column
         pathctx.get_path_output(
-            sql_tree, iterator_id, aspect='identity', env=sql_res.env
+            sql_tree, iterator_id, aspect='iterator', env=sql_res.env
         )
 
         ctes = list(sql_tree.ctes or [])
@@ -5060,12 +5066,27 @@ class PointerMetaCommand(
         ctes.append(
             pgast.CommonTableExpr(
                 name="_conv_rel",
-                aliascolnames=["val", "id"],
+                aliascolnames=["val", "iter"],
                 query=sql_tree,
             )
         )
         # compile to SQL
         ctes_sql = codegen.generate_ctes_source(ctes)
+
+        # <DEBUG>
+        from edb.common import debug
+        from edb.pgsql.debug import _rewrite_names_in_sql
+        debug.header('Delta Conversion Expression')
+        dummy = pgast.UpdateStmt(
+            ctes=[pgast.CommonTableExpr(
+                name=source_alias,
+                query=pgast.SelectStmt()
+            )] + ctes
+        )
+        dbg_source = codegen.generate_source(dummy, reordered=True, pretty=True)
+        dbg_source = _rewrite_names_in_sql(dbg_source, schema=schema)
+        debug.dump_code(dbg_source, lexer='sql')
+        # </DEBUG>
 
         return (ctes_sql, nullable)
 
