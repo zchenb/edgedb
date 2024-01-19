@@ -5025,7 +5025,7 @@ class PointerMetaCommand(
                 lexpr=pgast.StringConstant(val='{"object_id": "'),
                 rexpr=pgast.Expr(
                     name='||',
-                    lexpr=pgast.ColumnRef(name=('id',)),
+                    lexpr=pgast.ColumnRef(name=('iter',)),
                     rexpr=pgast.StringConstant(val='"}'),
                 )
             )
@@ -5042,19 +5042,16 @@ class PointerMetaCommand(
                 ],
             )
 
-            inner_colnames = ["val"]
-            target_list.append(
-                pgast.ResTarget(val=pgast.ColumnRef(name=("id",)))
-            )
-            target_list = [pgast.ResTarget(val=null_check)]
-
             sql_tree = pgast.SelectStmt(
-                target_list=target_list,
+                target_list=[
+                    pgast.ResTarget(val=null_check),
+                    pgast.ResTarget(val=pgast.ColumnRef(name=("iter",))),
+                ],
                 from_clause=[
                     pgast.RangeSubselect(
                         subquery=sql_tree,
                         alias=pgast.Alias(
-                            aliasname="_inner", colnames=inner_colnames
+                            aliasname="_inner", colnames=["val", "iter"]
                         )
                     )
                 ]
