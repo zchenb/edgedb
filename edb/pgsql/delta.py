@@ -4894,6 +4894,8 @@ class PointerMetaCommand(
                     pgast.ColumnRef(name=('ctid',))
                 src_rel.path_outputs[(tgt_path_id, 'iterator')] = \
                     pgast.ColumnRef(name=('ctid',))
+                src_rel.path_outputs[(tgt_path_id, 'value')] = \
+                    pgast.ColumnRef(name=('target',), nullable=True)
             else:
                 src_rel.path_outputs[(tgt_path_id, 'identity')] = \
                     pgast.ColumnRef(name=('id',))
