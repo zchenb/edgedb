@@ -749,8 +749,12 @@ def create_iterator_identity_for_path(
         if apply_volatility:
             apply_volatility_ref(stmt, ctx=ctx)
 
-    pathctx.put_path_var(stmt, path_id, id_expr, force=True, aspect='iterator')
     pathctx.put_path_bond(stmt, path_id, iterator=True)
+
+    if (path_id, 'iterator') in stmt.path_rvar_map:
+        return
+
+    pathctx.put_path_var(stmt, path_id, id_expr, aspect='iterator')
 
 
 def get_scope(

@@ -4318,7 +4318,11 @@ class PointerMetaCommand(
                 "{source_rel_alias}" AS ({source_rel}),
                 {conv_expr_ctes}
                 INSERT INTO {tab} (source, target)
-                (SELECT id, val FROM _conv_rel WHERE _conv_rel.val IS NOT NULL)
+                (
+                    SELECT iter, val
+                    FROM _conv_rel
+                    WHERE _conv_rel.val IS NOT NULL
+                )
             ''')
 
             if not is_scalar:

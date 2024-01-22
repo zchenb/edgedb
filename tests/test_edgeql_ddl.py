@@ -3038,11 +3038,11 @@ class TestEdgeQLDDL(tb.DDLTestCase):
 
         await self.assert_query_result(
             'select Goodbye',
-            [{}, {}]
+            [{}] # a single object, as only one link exists and needs to be cast
         )
         await self.assert_query_result(
             'select World { hell }',
-            [{'hell': {'id': uuid.UUID}}, {'hell': {'id': uuid.UUID}}]
+            tb.bag([{'hell': None}, {'hell': {'id': uuid.UUID}}])
         )
 
     async def test_edgeql_ddl_ptr_using_dml_04(self):
