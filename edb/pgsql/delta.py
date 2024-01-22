@@ -4652,6 +4652,7 @@ class PointerMetaCommand(
             SET {qi(target_col)} = _conv_rel.val
             FROM _conv_rel WHERE _update.{source_iter_col} = _conv_rel.iter
         '''
+        print(update_qry)
         self.pgops.add(dbops.Query(update_qry))
         trivial_cast_expr = qi(target_col)
 
@@ -4882,7 +4883,7 @@ class PointerMetaCommand(
         src_rel.path_outputs[(src_path_id, 'iterator')] = \
             pgast.ColumnRef(name=('id',))
         external_rels = {
-            src_path_id: (src_rel, ('value', 'source', 'identity', 'iterator'))
+            src_path_id: (src_rel, ('source', 'identity', 'iterator'))
         }
 
         if for_each_pointer:
@@ -4894,40 +4895,19 @@ class PointerMetaCommand(
                 src_rel.path_outputs[(tgt_path_id, 'iterator')] = \
                     pgast.ColumnRef(name=('ctid',))
             else:
+                src_rel.path_outputs[(tgt_path_id, 'identity')] = \
+                    pgast.ColumnRef(name=('id',))
                 src_rel.path_outputs[(tgt_path_id, 'iterator')] = \
                     pgast.ColumnRef(name=('id',))
 
             external_rels[ptr_path_id] = \
-                (src_rel, ('source', 'value'))
-            external_rels[tgt_path_id] = \
-                (src_rel, ('identity', 'source', 'value', 'iterator'))
-
-        #     if ptr_table:
-        #         rvar = compiler.new_external_rvar(
-        #             rel_name=(source_alias,),
-        #             path_id=ptr_path_id,
-        #             outputs={
-        #                 (src_path_id, ('identity',)): 'source',
-        #             },
-        #         )
-        #         external_rvars[ptr_path_id, 'source'] = rvar
-        #         external_rvars[ptr_path_id, 'value'] = rvar
-        #         external_rvars[src_path_id, 'identity'] = rvar
-        #         external_rvars[tgt_path_id, 'identity'] = rvar
-        #         if local_table_only and not is_lprop:
-        #             external_rvars[src_path_id, 'source'] = rvar
-        #             external_rvars[src_path_id, 'value'] = rvar
-        #         elif is_lprop:
-        #             external_rvars[tgt_path_id, 'value'] = rvar
-        #     else:
-        #         src_rvar = compiler.new_external_rvar(
-        #             rel_name=(source_alias,),
-        #             path_id=src_path_id,
-        #             outputs={},
-        #         )
-        #         external_rvars[src_path_id, 'identity'] = src_rvar
-        #         external_rvars[src_path_id, 'value'] = src_rvar
-        #         external_rvars[src_path_id, 'source'] = src_rvar
+                (src_rel, ('source'))
+            if ptr_table:
+                external_rels[tgt_path_id] = \
+                    (src_rel, ('identity', 'source', 'value', 'iterator'))
+            else:
+                external_rels[tgt_path_id] = \
+                    (src_rel, ('identity', 'value', 'iterator'))
 
         # Wrap the expression into a select with iterator, so DML and
         # volatile expressions are executed once for each object.
