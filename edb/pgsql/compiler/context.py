@@ -292,7 +292,11 @@ class CompilerContextLevel(compiler.ContextLevel):
     #: Mapping from path ids to "external" rels given by a particular relation
     external_rels: Mapping[
         irast.PathId,
-        Tuple[pgast.BaseRelation | pgast.CommonTableExpr, Tuple[str, ...]]
+        Tuple[
+            pgast.BaseRelation | pgast.CommonTableExpr,
+            Tuple[str, ...],
+            Tuple[Tuple[irast.PathId, Tuple[str, ...]], ...]
+        ]
     ]
 
     #: The CTE and some metadata of any enclosing iterator-like

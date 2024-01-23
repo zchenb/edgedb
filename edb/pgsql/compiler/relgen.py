@@ -802,10 +802,17 @@ def process_set_as_empty(
 def process_external_rel(
     ir_set: irast.Set, *, ctx: context.CompilerContextLevel
 ) -> SetRVars:
-    rel, aspects = ctx.external_rels[ir_set.path_id]
+    rel, aspects, additional_path_ids = ctx.external_rels[ir_set.path_id]
 
     rvar = relctx.rvar_for_rel(rel, ctx=ctx)
-    return new_simple_set_rvar(ir_set, rvar, aspects)
+
+    main = SetRVar(rvar=rvar, path_id=ir_set.path_id, aspects=aspects)
+
+    additional = [
+        SetRVar(rvar=rvar, path_id=path_id, aspects=asp)
+        for (path_id, asp) in additional_path_ids
+    ]
+    return SetRVars(main=main, new=[main] + additional)
 
 
 def process_set_as_link_property_ref(

@@ -4883,15 +4883,11 @@ class PointerMetaCommand(
         src_rel.path_outputs[(src_path_id, 'iterator')] = \
             pgast.ColumnRef(name=('id',))
         external_rels = {
-            src_path_id: (src_rel, ('source', 'identity', 'iterator'))
+            src_path_id: (src_rel, ('source', 'identity', 'iterator'), ())
         }
 
         if for_each_pointer:
             if ptr_table:
-                src_rel.path_outputs[(ptr_path_id, 'identity')] = \
-                    pgast.ColumnRef(name=('ctid',))
-                src_rel.path_outputs[(tgt_path_id, 'identity')] = \
-                    pgast.ColumnRef(name=('ctid',))
                 src_rel.path_outputs[(tgt_path_id, 'iterator')] = \
                     pgast.ColumnRef(name=('ctid',))
                 src_rel.path_outputs[(tgt_path_id, 'value')] = \
@@ -4903,13 +4899,13 @@ class PointerMetaCommand(
                     pgast.ColumnRef(name=('id',))
 
             external_rels[ptr_path_id] = \
-                (src_rel, ('source'))
+                (src_rel, ('source'), ())
             if ptr_table:
                 external_rels[tgt_path_id] = \
-                    (src_rel, ('identity', 'source', 'value', 'iterator'))
+                    (src_rel, ('identity', 'source', 'value', 'iterator'), ((ptr_path_id, ('source', 'identity')),))
             else:
                 external_rels[tgt_path_id] = \
-                    (src_rel, ('identity', 'value', 'iterator'))
+                    (src_rel, ('identity', 'value', 'iterator'), ())
 
         # Wrap the expression into a select with iterator, so DML and
         # volatile expressions are executed once for each object.
