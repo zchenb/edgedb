@@ -3036,9 +3036,11 @@ class TestEdgeQLDDL(tb.DDLTestCase):
             """
         )
 
+        # only one Goodbye object, as only one link exists, so only one cast is
+        # performed
         await self.assert_query_result(
             'select Goodbye',
-            [{}] # a single object, as only one link exists and needs to be cast
+            [{}]
         )
         await self.assert_query_result(
             'select World { hell }',
@@ -3082,7 +3084,7 @@ class TestEdgeQLDDL(tb.DDLTestCase):
             """
         )
         await self.assert_query_result(
-            'SELECT World { foo }', 
+            'SELECT World { foo }',
             [{"foo": "hello"}]
         )
 
@@ -3095,7 +3097,7 @@ class TestEdgeQLDDL(tb.DDLTestCase):
             """
         )
         await self.assert_query_result(
-            'SELECT World { foo, hell: { bar } }', 
+            'SELECT World { foo, hell: { bar } }',
             [{"foo": "hello", "hell": {"bar": "hello world"}}]
         )
 

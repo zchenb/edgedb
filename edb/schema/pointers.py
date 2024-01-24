@@ -2440,8 +2440,6 @@ class SetPointerType(
         schema: s_schema.Schema,
         context: sd.CommandContext,
     ) -> s_schema.Schema:
-        from edb.ir import utils as irutils
-
         orig_schema = schema
         orig_rec = context.current().enable_recursion
         context.current().enable_recursion = False

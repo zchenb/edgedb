@@ -4588,7 +4588,7 @@ class PointerMetaCommand(
         aux_ptr_col = None
 
         source_rel_alias = f'source_{uuidgen.uuid1mc()}'
-        source_rel_alias = f'source_rel' # DEBUG
+        source_rel_alias = f'source_rel'  # DEBUG
         source_rel = f'''SELECT *, ctid FROM {tab}'''
         source_iter_col = 'id'
         if ptr_table:
@@ -4778,7 +4778,7 @@ class PointerMetaCommand(
         Contract when produce_ctes=True:
         - Must be provided with alias of "iterator" rel - the relation that
           contains a row for each of the evaluations for the USING expression.
-        - Must be provided with alias of "source" rel - the relation that 
+        - Must be provided with alias of "source" rel - the relation that
           contains all columns of the subject ObjectType.
         - Result is SQL string that contains CTEs, last of which has following
           signature: _conv_rel (val, iter)
