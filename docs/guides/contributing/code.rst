@@ -54,7 +54,7 @@ On Ubuntu 22.10, these can be installed by running:
 A Nix shell with all dependencies and a Python virtual environment can
 be built with the following ``shell.nix`` file.
 
-.. code::
+.. code:: nix
 
    with import <nixpkgs> {};
    pkgs.mkShell {
