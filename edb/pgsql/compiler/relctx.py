@@ -743,7 +743,10 @@ def create_iterator_identity_for_path(
         if apply_volatility:
             apply_volatility_ref(stmt, ctx=ctx)
 
-    if (path_id, 'iterator') not in stmt.path_namespace:
+    already_exists = isinstance(stmt, pgast.Query) and (
+        maybe_get_path_rvar(stmt, path_id, aspect='iterator', ctx=ctx) != None
+    )
+    if not already_exists:
         id_expr = pgast.FuncCall(
             name=('edgedb', 'uuid_generate_v4'),
             args=[],
