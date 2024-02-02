@@ -33,7 +33,11 @@ from typing import *
 
 import aiosmtplib
 from jwcrypto import jwk, jwt
-from webauthn import generate_registration_options, options_to_json
+from webauthn import (
+    generate_registration_options,
+    options_to_json,
+)
+from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
 from edb import errors as edb_errors
 from edb.common import debug
@@ -358,9 +362,11 @@ class Router:
                 refresh_token=refresh_token,
             )
         new_url = _join_url_params(
-            (redirect_to_on_signup or redirect_to)
-            if new_identity
-            else redirect_to,
+            (
+                (redirect_to_on_signup or redirect_to)
+                if new_identity
+                else redirect_to
+            ),
             {"code": pkce_code, "provider": provider_name},
         )
         session_token = self._make_session_token(identity.id)
@@ -818,35 +824,19 @@ class Router:
             else:
                 raise ex
 
-    async def handle_webauthn_register_options(self, request: Any, response: Any):
+    async def handle_webauthn_register_options(
+        self, request: Any, response: Any
+    ):
         query = urllib.parse.parse_qs(
             request.url.query.decode("ascii") if request.url.query else ""
         )
         email = _get_search_param(query, "email")
-        webauthn_provider = self._get_webauthn_provider()
-        if webauthn_provider is None:
-            raise errors.MissingConfiguration(
-                "ext::auth::AuthConfig::providers",
-                "WebAuthn provider is not configured",
+        webauthn_client = webauthn.Client(self.db)
+
+        (user_handle, registration_options) = (
+            await webauthn_client.create_registration_options_for_email(
+                email=email,
             )
-
-        app_details_config = self._get_app_details_config()
-
-        registration_options = generate_registration_options(
-            rp_id=webauthn_provider.relying_party_id,
-            rp_name=(
-                app_details_config.app_name
-                or webauthn_provider.relying_party_origin
-            ),
-            user_name=email,
-            user_display_name=email,
-        )
-
-        await webauthn.create_registration_challenge(
-            self.db,
-            email=email,
-            challenge=registration_options.challenge,
-            user_handle=registration_options.user.id,
         )
 
         response.status = http.HTTPStatus.OK
@@ -854,9 +844,9 @@ class Router:
         _set_cookie(
             response,
             "edgedb-webauthn-registration-user-handle",
-            base64.urlsafe_b64encode(registration_options.user.id).decode(),
+            user_handle,
         )
-        response.body = options_to_json(registration_options).encode()
+        response.body = registration_options
 
     async def handle_webauthn_register(self, request: Any, response: Any):
         data = self._get_data_from_request(request)
@@ -865,12 +855,7 @@ class Router:
             data,
             {"provider", "challenge", "email", "credentials", "verify_url"},
         )
-        provider_config = self._get_webauthn_provider()
-        if provider_config is None:
-            raise errors.MissingConfiguration(
-                "ext::auth::AuthConfig::providers",
-                "WebAuthn provider is not configured",
-            )
+        webauthn_client = webauthn.Client(self.db)
 
         provider_name: str = data["provider"]
         email: str = data["email"]
@@ -893,15 +878,13 @@ class Router:
                 " cookie"
             ) from e
 
-        require_verification = provider_config.require_verification
+        require_verification = webauthn_client.provider.require_verification
         pkce_code: Optional[str] = None
 
-        identity = await webauthn.register(
-            self.db,
+        identity = await webauthn_client.register(
             credentials=credentials,
             email=email,
             user_handle=user_handle,
-            provider_config=provider_config,
         )
         if not require_verification:
             await pkce.create(self.db, pkce_challenge)
@@ -934,28 +917,67 @@ class Router:
                 {"code": pkce_code, "provider": provider_name}
             ).encode()
 
-    async def handle_webauthn_authenticate(
+    async def handle_webauthn_authenticate_options(
         self, request: Any, response: Any
     ):
-        data = self._get_data_from_request(request)
-
-        _check_keyset(data, {"provider", "challenge", "email", "credentials", "verify_url"})
-        provider_config = self._get_webauthn_provider()
-        if provider_config is None:
+        query = urllib.parse.parse_qs(
+            request.url.query.decode("ascii") if request.url.query else ""
+        )
+        email = _get_search_param(query, "email")
+        webauthn_provider = self._get_webauthn_provider()
+        if webauthn_provider is None:
             raise errors.MissingConfiguration(
                 "ext::auth::AuthConfig::providers",
                 "WebAuthn provider is not configured",
             )
+        webauthn_client = webauthn.Client(self.db)
+
+        (user_handle, registration_options) = (
+            await webauthn_client.create_authentication_options_for_email(
+                email=email, webauthn_provider=webauthn_provider
+            )
+        )
+
+        _set_cookie(
+            response,
+            "edgedb-webauthn-authentication-user-handle",
+            user_handle,
+        )
+        response.status = http.HTTPStatus.OK
+        response.content_type = b"application/json"
+        response.body = registration_options
+
+    async def handle_webauthn_authenticate(self, request: Any, response: Any):
+        data = self._get_data_from_request(request)
+
+        _check_keyset(
+            data,
+            {"provider", "challenge", "email", "credentials", "verify_url"},
+        )
+        webauthn_client = webauthn.Client(self.db)
 
         provider_name: str = data["provider"]
         email: str = data["email"]
-        verify_url: str = data["verify_url"]
-        credentials: str = data["credentials"]
+        assertion: str = data["assertion"]
         pkce_challenge: str = data["challenge"]
 
         user_handle_cookie = request.cookies.get(
-            "edgedb-webauthn-registration-user-handle"
+            "edgedb-webauthn-authentication-user-handle"
         ).value
+        if user_handle_cookie is None:
+            raise errors.InvalidData(
+                "Missing 'edgedb-webauthn-authentication-user-handle' cookie"
+            )
+        try:
+            user_handle = base64.urlsafe_b64decode(user_handle_cookie)
+        except Exception as e:
+            raise errors.InvalidData(
+                "Failed to decode 'edgedb-webauthn-authentication-user-handle'"
+                " cookie"
+            ) from e
+
+        require_verification = webauthn_client.provider.require_verification
+        pkce_code: Optional[str] = None
 
 
     async def handle_ui_signin(self, request: Any, response: Any):
@@ -1231,14 +1253,15 @@ class Router:
                         identity_id=identity_id,
                     )
                 except errors.VerificationTokenExpired:
+                    app_details_config = self._get_app_details_config()
                     response.status = http.HTTPStatus.OK
                     response.content_type = b"text/html"
                     response.body = ui.render_email_verification_expired_page(
                         verification_token=maybe_verification_token,
-                        app_name=ui_config.app_name,
-                        logo_url=ui_config.logo_url,
-                        dark_logo_url=ui_config.dark_logo_url,
-                        brand_color=ui_config.brand_color,
+                        app_name=app_details_config.app_name,
+                        logo_url=app_details_config.logo_url,
+                        dark_logo_url=app_details_config.dark_logo_url,
+                        brand_color=app_details_config.brand_color,
                     )
                     return
 
@@ -1427,8 +1450,9 @@ class Router:
         self,
         identity_id: str,
         secret: str,
-        additional_claims: dict[str, str | int | float | bool | None]
-        | None = None,
+        additional_claims: (
+            dict[str, str | int | float | bool | None] | None
+        ) = None,
         expires_in: datetime.timedelta | None = None,
     ) -> str:
         signing_key = self._get_auth_signing_key()
