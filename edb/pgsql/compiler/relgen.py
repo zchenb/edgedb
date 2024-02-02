@@ -875,6 +875,7 @@ def process_set_as_link_property_ref(
                 newctx.rel, link_path_id, aspect='source', ctx=newctx
             )
         if link_rvar is None:
+            assert link_prefix.rptr is not None
             link_rvar = relctx.new_pointer_rvar(
                 link_prefix.rptr, src_rvar=src_rvar,
                 link_bias=True, ctx=newctx)

@@ -3038,10 +3038,7 @@ class TestEdgeQLDDL(tb.DDLTestCase):
 
         # only one Goodbye object, as only one link exists, so only one cast is
         # performed
-        await self.assert_query_result(
-            'select Goodbye',
-            [{}]
-        )
+        await self.assert_query_result('select Goodbye', [{}])
         await self.assert_query_result(
             'select World { hell }',
             tb.bag([{'hell': None}, {'hell': {'id': uuid.UUID}}])
@@ -3084,8 +3081,7 @@ class TestEdgeQLDDL(tb.DDLTestCase):
             """
         )
         await self.assert_query_result(
-            'SELECT World { foo }',
-            [{"foo": "hello"}]
+            'SELECT World { foo }', [{"foo": "hello"}]
         )
 
         await self.con.execute(

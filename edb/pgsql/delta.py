@@ -4882,7 +4882,7 @@ class PointerMetaCommand(
         )
         src_rel.path_outputs[(src_path_id, 'iterator')] = \
             pgast.ColumnRef(name=('id',))
-        external_rels = {
+        ext_rels: Dict[irast.PathId, compiler.context.ExternalRelsEntry] = {
             src_path_id: (src_rel, ('source', 'identity', 'iterator'), ())
         }
 
@@ -4898,14 +4898,19 @@ class PointerMetaCommand(
                 src_rel.path_outputs[(tgt_path_id, 'iterator')] = \
                     pgast.ColumnRef(name=('id',))
 
-            external_rels[ptr_path_id] = \
-                (src_rel, ('source'), ())
+            ext_rels[ptr_path_id] = (src_rel, ('source',), ())
             if ptr_table:
-                external_rels[tgt_path_id] = \
-                    (src_rel, ('identity', 'source', 'value', 'iterator'), ((ptr_path_id, ('source', 'identity')),))
+                ext_rels[tgt_path_id] = (
+                    src_rel,
+                    ('identity', 'source', 'value', 'iterator'),
+                    ((ptr_path_id, ('source', 'identity')),),
+                )
             else:
-                external_rels[tgt_path_id] = \
-                    (src_rel, ('identity', 'value', 'iterator'), ())
+                ext_rels[tgt_path_id] = (
+                    src_rel,
+                    ('identity', 'value', 'iterator'),
+                    (),
+                )
 
         # Wrap the expression into a select with iterator, so DML and
         # volatile expressions are executed once for each object.
@@ -4979,7 +4984,7 @@ class PointerMetaCommand(
         sql_res = compiler.compile_ir_to_sql_tree(
             ir,
             output_format=compiler.OutputFormat.NATIVE_INTERNAL,
-            external_rels=external_rels,
+            external_rels=ext_rels,
             backend_runtime_params=context.backend_runtime_params,
         )
         sql_tree = sql_res.ast
